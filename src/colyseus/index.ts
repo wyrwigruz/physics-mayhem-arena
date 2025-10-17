@@ -1,5 +1,5 @@
-import { Client } from "colyseus.js";
-const client = new Client("https://10ef95703748.ngrok-free.app");
+import * as Colyseus from "colyseus.js";
+const client = new Colyseus("https://10ef95703748.ngrok-free.app");
 interface MyState {
 
 }

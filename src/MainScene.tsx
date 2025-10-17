@@ -1,10 +1,12 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { PixelRatio, StyleSheet, View } from "react-native";
 import { Canvas, useCanvasEffect } from "react-native-wgpu";
 import { ArrowKeyboard } from "./ArrowKeyboard";
+import { useAccelerometer } from "@/hooks/useAccelerometer";
 
 export function MainScene() {
   // Rotation state controlled by arrow keys
+  const { data } = useAccelerometer();
   const rotationX = useRef(0);
   const rotationY = useRef(0);
 
@@ -298,6 +300,11 @@ export function MainScene() {
     render();
   });
 
+  useEffect(() => {
+    rotationX.current = data.x;
+    rotationY.current = data.y;
+  }, [data]);
+
   // Handle arrow key presses to roll the ball
   const handleArrowPress = (direction: "up" | "down" | "left" | "right") => {
     const rotationStep = 0.1;
@@ -310,10 +317,10 @@ export function MainScene() {
         rotationX.current -= rotationStep;
         break;
       case "left":
-        rotationY.current -= rotationStep;
+        rotationY.current += rotationStep;
         break;
       case "right":
-        rotationY.current += rotationStep;
+        rotationY.current -= rotationStep;
         break;
     }
   };

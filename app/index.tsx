@@ -1,19 +1,27 @@
 import { MainScene } from "@/src/MainScene";
-import { Text, View } from "react-native";
+import { Client } from "colyseus.js";
+import { StyleSheet, View } from "react-native";
+
+const client = new Client();
+client.joinOrCreate("my_room").then((room) => {
+  room.onStateChange((state) => {
+    console.log("onStateChange:", state);
+  });
+
+  room.onLeave((code) => console.log("code", code));
+});
 
 export default function Index() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-      <View style={{ width: 200, height: 200, backgroundColor: "#00ffff" }}>
-        <MainScene />
-      </View>
+    <View style={styles.container}>
+      <MainScene />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+});

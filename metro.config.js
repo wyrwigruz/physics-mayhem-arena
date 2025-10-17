@@ -7,4 +7,5 @@ config.resolver.assetExts.push(
   // Adds support for `.db` files for SQLite databases
   "glb"
 );
+config.resolver.unstable_enablePackageExports = false;
 module.exports = config;

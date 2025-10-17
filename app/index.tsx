@@ -1,21 +1,22 @@
 import { MainScene } from "@/src/MainScene";
-import { Client } from "colyseus.js";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Button } from "react-native";
+import {connect, useColyseusConnection} from '@/src/colyseus';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-const client = new Client();
-client.joinOrCreate("my_room").then((room) => {
-  room.onStateChange((state) => {
-    console.log("onStateChange:", state);
-  });
-
-  room.onLeave((code) => console.log("code", code));
-});
-
 export default function Index() {
+  const {inputData, snapshotData} = useColyseusConnection('test2', 
+  (inputMsg)=>{
+    console.log("testowy A");
+  }, 
+  (snapshotMsg)=>{
+    console.log("testowy B");
+  });
   return (
     <GestureHandlerRootView>
       <View style={styles.container}>
+        <Button title="connect" onPress={()=>{
+          connect("test");
+        }}/>
         <MainScene />
       </View>
     </GestureHandlerRootView>

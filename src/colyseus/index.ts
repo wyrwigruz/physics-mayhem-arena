@@ -1,16 +1,23 @@
 import { Client, Room } from "colyseus.js";
-import { useState } from "react";
+import { useRef, useState } from "react";
 const client = new Client("ws://192.168.1.93:2567/");
 interface UseColyseusConnectionProps {
   onInput?: (message: any) => void;
   onSnapshot?: (snapshot: any) => void;
 }
 
+interface IMessage {
+  timestamp: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
 export function useColyseusConnection({
   onInput,
   onSnapshot,
 }: UseColyseusConnectionProps) {
-  const [room, setRoom] = useState<Room | null>(null);
+  const room = useRef<Room | null>(null);
   const [inputData, setInputData] = useState<any>(null);
   const [snapshotData, setSnapshotData] = useState<any>(null);
   const [error, setError] = useState<any>(null);
@@ -19,7 +26,7 @@ export function useColyseusConnection({
     try {
       const roomInstance = await client.joinOrCreate("battle_ball", { name });
       console.log("Joined successfully:", roomInstance.id);
-      setRoom(roomInstance);
+      room.current = roomInstance;
 
       roomInstance.onMessage("input", (message) => {
         console.log("Input message received:", message);
@@ -37,6 +44,10 @@ export function useColyseusConnection({
       setError(e);
     };
   }
+
+  const send = (message:IMessage) =>{
+    room.current?.send('accel', message);
+  }
   
   return {
     room,
@@ -44,5 +55,6 @@ export function useColyseusConnection({
     snapshotData,
     error,
     connect,
+    send,
   };
 }

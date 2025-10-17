@@ -1,6 +1,7 @@
 import { MainScene } from "@/src/MainScene";
 import { Client } from "colyseus.js";
 import { StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 const client = new Client();
 client.joinOrCreate("my_room").then((room) => {
@@ -13,9 +14,11 @@ client.joinOrCreate("my_room").then((room) => {
 
 export default function Index() {
   return (
-    <View style={styles.container}>
-      <MainScene />
-    </View>
+    <GestureHandlerRootView>
+      <View style={styles.container}>
+        <MainScene />
+      </View>
+    </GestureHandlerRootView>
   );
 }
 

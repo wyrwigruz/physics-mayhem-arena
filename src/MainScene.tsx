@@ -1,7 +1,13 @@
-import {PixelRatio, StyleSheet} from 'react-native';
-import {Canvas, useCanvasEffect} from 'react-native-wgpu';
+import { useRef } from "react";
+import { PixelRatio, StyleSheet, View } from "react-native";
+import { Canvas, useCanvasEffect } from "react-native-wgpu";
+import { ArrowKeyboard } from "./ArrowKeyboard";
 
 export function MainScene() {
+  // Rotation state controlled by arrow keys
+  const rotationX = useRef(0);
+  const rotationY = useRef(0);
+
   const ref = useCanvasEffect(async () => {
     console.log("Initializing WebGPU...");
 
@@ -103,8 +109,20 @@ export function MainScene() {
     });
     device.queue.writeBuffer(indexBuffer, 0, indices);
 
-    // Shader code - simple pass-through for testing
+    // Create uniform buffer for transformation matrix
+    const uniformBufferSize = 4 * 16; // 4x4 matrix = 16 floats
+    const uniformBuffer = device.createBuffer({
+      size: uniformBufferSize,
+      usage: 0x40 | 0x8, // UNIFORM | COPY_DST
+    });
+
+    // Shader code - with rotation transformation
     const shaderCode = `
+      struct Uniforms {
+        modelMatrix : mat4x4<f32>,
+      }
+      @group(0) @binding(0) var<uniform> uniforms : Uniforms;
+
       struct VertexInput {
         @location(0) position : vec3<f32>,
         @location(1) color : vec3<f32>,
@@ -118,7 +136,7 @@ export function MainScene() {
       @vertex
       fn vertexMain(input : VertexInput) -> VertexOutput {
         var output : VertexOutput;
-        output.position = vec4<f32>(input.position, 1.0);
+        output.position = uniforms.modelMatrix * vec4<f32>(input.position, 1.0);
         output.color = input.color;
         return output;
       }
@@ -132,9 +150,36 @@ export function MainScene() {
     // Create shader module
     const shaderModule = device.createShaderModule({ code: shaderCode });
 
+    // Create bind group layout
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: 0x1, // VERTEX
+          buffer: { type: "uniform" },
+        },
+      ],
+    });
+
+    // Create bind group
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: { buffer: uniformBuffer },
+        },
+      ],
+    });
+
+    // Create pipeline layout
+    const pipelineLayout = device.createPipelineLayout({
+      bindGroupLayouts: [bindGroupLayout],
+    });
+
     // Create pipeline
     const pipeline = device.createRenderPipeline({
-      layout: "auto",
+      layout: pipelineLayout,
       vertex: {
         module: shaderModule,
         entryPoint: "vertexMain",
@@ -171,10 +216,50 @@ export function MainScene() {
 
     let frameCount = 0;
 
+    // Helper function to create rotation matrix
+    const createRotationMatrix = (angleX: number, angleY: number) => {
+      // Rotation around X axis
+      const cx = Math.cos(angleX);
+      const sx = Math.sin(angleX);
+
+      // Rotation around Y axis
+      const cy = Math.cos(angleY);
+      const sy = Math.sin(angleY);
+
+      // Combined rotation matrix (Y * X)
+      return new Float32Array([
+        cy,
+        sy * sx,
+        sy * cx,
+        0,
+        0,
+        cx,
+        -sx,
+        0,
+        -sy,
+        cy * sx,
+        cy * cx,
+        0,
+        0,
+        0,
+        0,
+        1,
+      ]);
+    };
+
     // Render function for animation loop
     const render = () => {
       try {
         frameCount++;
+
+        // Use gesture-controlled rotation
+        const modelMatrix = createRotationMatrix(
+          rotationX.current,
+          rotationY.current
+        );
+
+        // Update uniform buffer with new rotation
+        device.queue.writeBuffer(uniformBuffer, 0, modelMatrix);
 
         // Create command encoder
         const commandEncoder = device.createCommandEncoder();
@@ -193,9 +278,10 @@ export function MainScene() {
         });
 
         renderPass.setPipeline(pipeline);
+        renderPass.setBindGroup(0, bindGroup);
         renderPass.setVertexBuffer(0, vertexBuffer);
         renderPass.setIndexBuffer(indexBuffer, "uint16");
-        renderPass.drawIndexed(indexCount); // Draw only 3 indices (the triangle)
+        renderPass.drawIndexed(indexCount);
         renderPass.end();
 
         device.queue.submit([commandEncoder.finish()]);
@@ -212,10 +298,39 @@ export function MainScene() {
     render();
   });
 
-  return <Canvas ref={ref} style={styles.canvas} />;
+  // Handle arrow key presses to roll the ball
+  const handleArrowPress = (direction: "up" | "down" | "left" | "right") => {
+    const rotationStep = 0.1;
+
+    switch (direction) {
+      case "up":
+        rotationX.current += rotationStep;
+        break;
+      case "down":
+        rotationX.current -= rotationStep;
+        break;
+      case "left":
+        rotationY.current -= rotationStep;
+        break;
+      case "right":
+        rotationY.current += rotationStep;
+        break;
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Canvas ref={ref} style={styles.canvas} />
+      <ArrowKeyboard onArrowPress={handleArrowPress} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: "relative",
+  },
   canvas: {
     width: "100%",
     aspectRatio: 1,

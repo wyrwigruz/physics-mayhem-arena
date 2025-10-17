@@ -1,10 +1,10 @@
 import { MainScene } from "@/src/MainScene";
 import { StyleSheet, View, Button } from "react-native";
-import {connect, useColyseusConnection} from '@/src/colyseus';
+import {useColyseusConnection} from '@/src/colyseus';
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export default function Index() {
-  const {inputData, snapshotData} = useColyseusConnection('test2', 
+  const {inputData, snapshotData, connect} = useColyseusConnection( 
   (inputMsg)=>{
     console.log("testowy A");
   }, 
